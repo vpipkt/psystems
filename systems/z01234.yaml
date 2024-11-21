@@ -1,0 +1,13 @@
+apiVersion: psystem.vpipkt/v1alpha1
+kind: System
+metadata:
+  name: z01234
+spec:
+  systemName: example
+  owners:
+    - email: who@dat.com
+      githubUsername: vpipkt
+  alertReceivers:
+    emails:
+      - who@dat.com
+      - dem@dat.com

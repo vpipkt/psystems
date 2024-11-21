@@ -1,0 +1,15 @@
+apiVersion: psystem.vpipkt/v1alpha1
+kind: System
+metadata:
+  name: z98765
+spec:
+  systemName: faker
+  owners:
+    - email: whom@dat.com
+      githubUsername: jonny
+    - email: dem@dat.com
+      githubUsername: datanerd
+  alertReceivers:
+    emails:
+      - dem@dat.com
+      - ze@dat.com
