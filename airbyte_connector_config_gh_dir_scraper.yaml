@@ -1,0 +1,302 @@
+version: 5.7.5
+
+type: DeclarativeSource
+
+check:
+  type: CheckStream
+  stream_names:
+    - directory
+
+definitions:
+  streams:
+    files:
+      type: DeclarativeStream
+      name: files
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: /{{ stream_partition.parent_id }}
+          http_method: GET
+          request_headers:
+            Accept: application/vnd.github.object+json
+            Authorization: Bearer {{ config["pat"] }}
+        record_selector:
+          type: RecordSelector
+          extractor:
+            type: DpathExtractor
+            field_path: []
+        partition_router:
+          type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              stream:
+                $ref: "#/definitions/streams/directory"
+              parent_key: path
+              partition_field: parent_id
+      primary_key:
+        - name
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/files"
+      transformations:
+        - type: AddFields
+          fields:
+            - path:
+                - content_decoded
+              value: "{{ record['content'] | base64decode }}"
+        - type: AddFields
+          fields:
+            - path:
+                - owner
+              value: "{{ config[\"owner\"] }}"
+        - type: AddFields
+          fields:
+            - path:
+                - repo
+              value: "{{ config[\"repo\"] }}"
+        - type: AddFields
+          fields:
+            - path:
+                - ref
+              value: "{{ config[\"ref\"] }}"
+    directory:
+      type: DeclarativeStream
+      name: directory
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: /{{ config["path"] }}
+          http_method: GET
+          request_headers:
+            Accept: application/vnd.github+json
+            Authorization: Bearer {{ config['pat'] }}
+          request_parameters:
+            ref: "{{ config[\"ref\"] }}"
+        record_selector:
+          type: RecordSelector
+          extractor:
+            type: DpathExtractor
+            field_path: []
+      primary_key:
+        - path
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/directory"
+  base_requester:
+    type: HttpRequester
+    url_base: >-
+      https://api.github.com/repos/{{ config['owner'] }}/{{ config['repo']
+      }}/contents
+
+streams:
+  - $ref: "#/definitions/streams/directory"
+  - $ref: "#/definitions/streams/files"
+
+spec:
+  type: Spec
+  connection_specification:
+    type: object
+    $schema: http://json-schema.org/draft-07/schema#
+    required:
+      - owner
+      - repo
+      - path
+      - ref
+    properties:
+      pat:
+        type: string
+        order: 4
+        title: pat
+        airbyte_secret: true
+      ref:
+        type: string
+        description: "GitHub ref to use, branch or tag "
+        order: 3
+        title: ref
+        default: main
+      path:
+        type: string
+        description: repository path
+        order: 2
+        title: path
+        default: systems
+      repo:
+        type: string
+        description: "repository name in GitHub "
+        order: 1
+        title: repo
+        default: s07373-nova-systems
+      owner:
+        type: string
+        description: "GitHub repo owner "
+        order: 0
+        title: owner
+        default: TelenorNorgeInternal
+    additionalProperties: true
+
+metadata:
+  assist: {}
+  testedStreams:
+    files:
+      hasRecords: true
+      streamHash: 21e472d7af84a3f104985f229a94ee4bca56cde0
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    directory:
+      hasRecords: true
+      streamHash: 4b838d61ae6648f3408bac5688f46d5a5b0b5860
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+  autoImportSchema:
+    files: true
+    directory: true
+
+schemas:
+  files:
+    type: object
+    $schema: http://json-schema.org/schema#
+    required:
+      - name
+    properties:
+      type:
+        type:
+          - string
+          - "null"
+      ref:
+        type:
+          - string
+          - "null"
+      sha:
+        type:
+          - string
+          - "null"
+      url:
+        type:
+          - string
+          - "null"
+      name:
+        type: string
+      path:
+        type:
+          - string
+          - "null"
+      repo:
+        type:
+          - string
+          - "null"
+      size:
+        type:
+          - number
+          - "null"
+      owner:
+        type:
+          - string
+          - "null"
+      _links:
+        type:
+          - object
+          - "null"
+        properties:
+          git:
+            type:
+              - string
+              - "null"
+          html:
+            type:
+              - string
+              - "null"
+          self:
+            type:
+              - string
+              - "null"
+      content:
+        type:
+          - string
+          - "null"
+      git_url:
+        type:
+          - string
+          - "null"
+      encoding:
+        type:
+          - string
+          - "null"
+      html_url:
+        type:
+          - string
+          - "null"
+      download_url:
+        type:
+          - string
+          - "null"
+      content_decoded:
+        type:
+          - string
+          - "null"
+    additionalProperties: true
+  directory:
+    type: object
+    $schema: http://json-schema.org/schema#
+    required:
+      - path
+    properties:
+      type:
+        type:
+          - string
+          - "null"
+      sha:
+        type:
+          - string
+          - "null"
+      url:
+        type:
+          - string
+          - "null"
+      name:
+        type:
+          - string
+          - "null"
+      path:
+        type: string
+      size:
+        type:
+          - number
+          - "null"
+      _links:
+        type:
+          - object
+          - "null"
+        properties:
+          git:
+            type:
+              - string
+              - "null"
+          html:
+            type:
+              - string
+              - "null"
+          self:
+            type:
+              - string
+              - "null"
+      git_url:
+        type:
+          - string
+          - "null"
+      html_url:
+        type:
+          - string
+          - "null"
+      download_url:
+        type:
+          - string
+          - "null"
+    additionalProperties: true
